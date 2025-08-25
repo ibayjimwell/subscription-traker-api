@@ -1,8 +1,8 @@
 import mongoose from "mongoose"
-import User from "../models/user.models";
+import User from "../models/user.models.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env";
+import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env.js";
 
 // Implementing signUp logic
 export const signUp = async (req, res, next) => {
@@ -29,6 +29,9 @@ export const signUp = async (req, res, next) => {
         const newUser = await User.create([{ name, email, password: hashedPassword }], { session });
         const token = jwt.sign({userId: newUser[0]._id}, JWT_SECRET, {expiresIn: JWT_EXPIRES_IN});
 
+        await session.commitTransaction();
+        session.endSession();
+
         res.status(201).json({
             success: true,
             message: 'User created successfully',
@@ -45,8 +48,41 @@ export const signUp = async (req, res, next) => {
 
 }
 
+// Implementing signIn logic
 export const signIn = async (req, res, next) => {
-    // Implementing signIn logic
+    try {
+        const { email, password } = req.body;
+
+        // Checking if the email exist in the database
+        const user = await User.findOne({ email });
+        if (!user) {
+            const error = new Error('User not found.');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        // Checking if the password is correct
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            const error = new Error('Invalid password.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
+        res.status(200).json({
+            success: true,
+            message: 'User signed in successfully',
+            data: {
+                token,
+                user,
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
 }
 
 export const signOut = async (req, res, next) => {

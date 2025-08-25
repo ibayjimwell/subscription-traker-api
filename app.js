@@ -9,6 +9,7 @@ import errorMiddleware from './middlewares/error.middleware.js';
 
 const app = express();
 
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -22,6 +23,7 @@ app.use('/api/v2/users', userRouter);
 // Route for Subscriptions
 app.use('/api/v1/subscriptions', subscriptionRouter);
 
+// Error handling middleware
 app.use(errorMiddleware);
 
 app.listen(PORT, async () => {
